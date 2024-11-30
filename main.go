@@ -15,10 +15,10 @@ type ContextKey string
 var (
 	client       = http.Client{Timeout: 5 * time.Second}
 	eaContextKey = ContextKey("ea_context")
-	urlBase      = "https://ice-milo.com/ea-api/api/"
+	urlBase      = "https://ice-milo.com/jasminauth/api"
 
-	headerApiKey    = "Ea-Api-Key"
-	headerUserToken = "Ea-User-Token"
+	headerApiKey    = "Jas-Api-Key"
+	headerUserToken = "Jas-User-Token"
 
 	ErrorEaContextError    = "jasminauth: failed to create/retrieve request context"
 	ErrorInvalidKeyOrToken = "jasminauth: invalid api-key or user-token"
@@ -33,7 +33,7 @@ type reqContext struct {
 	mutex     *sync.Mutex
 }
 
-// A middleware which allows retrieving user info from incoming requests with a "Ea-User-Token" header
+// A middleware which allows retrieving user info from incoming requests with a "Jas-User-Token" header
 func WithUser(apiKey string, version int) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
