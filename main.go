@@ -13,12 +13,12 @@ import (
 type ContextKey string
 
 var (
-	client       = http.Client{Timeout: 5 * time.Second}
-	eaContextKey = ContextKey("ea_context")
-	urlBase      = "https://ice-milo.com/ea-api/api/"
+	client            = http.Client{Timeout: 5 * time.Second}
+	jasAuthContextKey = ContextKey("jas_auth_context")
+	urlBase           = "https://ice-milo.com/jasminauth/api"
 
-	headerApiKey    = "Ea-Api-Key"
-	headerUserToken = "Ea-User-Token"
+	headerApiKey    = "Jas-Api-Key"
+	headerUserToken = "Jas-User-Token"
 
 	ErrorEaContextError    = "jasminauth: failed to create/retrieve request context"
 	ErrorInvalidKeyOrToken = "jasminauth: invalid api-key or user-token"
@@ -33,7 +33,7 @@ type reqContext struct {
 	mutex     *sync.Mutex
 }
 
-// A middleware which allows retrieving user info from incoming requests with a "Ea-User-Token" header
+// A middleware which allows retrieving user info from incoming requests with a "Jas-User-Token" header
 func WithUser(apiKey string, version int) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func WithUser(apiKey string, version int) func(http.Handler) http.Handler {
 				apiKey = r.Header.Get(headerApiKey)
 			}
 
-			eaContext := &reqContext{
+			jasAuthContext := &reqContext{
 				apiKey:    apiKey,
 				userToken: userToken,
 				version:   version,
@@ -51,7 +51,7 @@ func WithUser(apiKey string, version int) func(http.Handler) http.Handler {
 				mutex:     &sync.Mutex{},
 			}
 
-			ctx := context.WithValue(r.Context(), eaContextKey, eaContext)
+			ctx := context.WithValue(r.Context(), jasAuthContextKey, jasAuthContext)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -60,30 +60,30 @@ func WithUser(apiKey string, version int) func(http.Handler) http.Handler {
 // Will make at most 1 API call (if successful) per context and store the retrieved user-information
 // in the context to be referenced again if needed.
 func GetUser(ctx context.Context) (*User, error) {
-	eaContext, ok := ctx.Value(eaContextKey).(*reqContext)
+	jasAuthContext, ok := ctx.Value(jasAuthContextKey).(*reqContext)
 	if !ok {
 		return nil, fmt.Errorf(ErrorEaContextError)
 	}
 
 	// if apiKey or userToken are missing, return error
-	if eaContext.apiKey == "" || eaContext.userToken == "" {
+	if jasAuthContext.apiKey == "" || jasAuthContext.userToken == "" {
 		return nil, fmt.Errorf(ErrorInvalidKeyOrToken)
 	}
 
 	// if user exists, return it
-	if eaContext.user != nil {
-		return eaContext.user, nil
+	if jasAuthContext.user != nil {
+		return jasAuthContext.user, nil
 	}
 
-	eaContext.mutex.Lock()
-	defer eaContext.mutex.Unlock()
+	jasAuthContext.mutex.Lock()
+	defer jasAuthContext.mutex.Unlock()
 
 	// check again - if user exists now, return it
-	if eaContext.user != nil {
-		return eaContext.user, nil
+	if jasAuthContext.user != nil {
+		return jasAuthContext.user, nil
 	}
 
-	user, err := validateToken(eaContext.apiKey, eaContext.userToken, eaContext.version)
+	user, err := validateToken(jasAuthContext.apiKey, jasAuthContext.userToken, jasAuthContext.version)
 	if err != nil || user == nil || user.Id == "" || user.Username == "" {
 		if err == nil {
 			return nil, fmt.Errorf(ErrorUserInfoMissing)
@@ -92,7 +92,7 @@ func GetUser(ctx context.Context) (*User, error) {
 	}
 
 	// user was retrieved - set it in context
-	eaContext.user = user
+	jasAuthContext.user = user
 
 	return user, nil
 }
@@ -102,7 +102,7 @@ type validateRes struct {
 }
 
 func validateToken(apiKey string, userToken string, version int) (*User, error) {
-	url := fmt.Sprintf("%s/v%d/ea_validate/%s", urlBase, version, userToken)
+	url := fmt.Sprintf("%s/v%d/validate/%s", urlBase, version, userToken)
 	ssoReq, err := http.NewRequest(http.MethodGet, url, nil)
 	ssoReq.Header.Set("Content-Type", "application/json")
 	ssoReq.Header.Set(headerApiKey, apiKey)

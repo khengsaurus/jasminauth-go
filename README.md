@@ -10,7 +10,7 @@ go get github.com/khengsaurus/jasminauth-go
 
 ## Middleware
 
-The middleware and utility functions offered here allow user-information to be retrieved from your requests' `Ea-User-Token` header. If you do not provide your api-key to the middleware, the `Ea-Api-Key` header from your requests will be used instead. Both user-token and api-key are required to retrieve user information.
+The middleware and utility functions offered here allow user-information to be retrieved from your requests' `Jas-User-Token` header. If you do not provide your api-key to the middleware, the `Jas-Api-Key` header from your requests will be used instead. Both user-token and api-key are required to retrieve user information.
 
 ```go
 import (
